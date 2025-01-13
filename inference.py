@@ -9,6 +9,7 @@ from bbqwen.configuration_bbqwen2_vl import BBQwen2VLConfig
 import time
 from functools import wraps
 import traceback
+from line_profiler import profile 
 
 def load_model(model_path: str, device: str = "cuda" if torch.cuda.is_available() else "cpu"):
     """Load model with optimizations."""
@@ -31,7 +32,7 @@ def prepare_image(image_path: Path):
     return Image.open(image_path)
     
 
-@torch.inference_mode()
+@profile
 def generate_with_bbox(
     model, 
     processor, 
@@ -65,21 +66,33 @@ def generate_with_bbox(
     )
     
     inputs = edict({k: v.to(model.device) for k, v in inputs.items()})
+
+    @profile
+    def model_bbox(model, inputs):
+        with torch.inference_mode():
+            model_outputs = model(**inputs)
+            bbox_predictions = model_outputs.bbox_logits.sigmoid().cpu().numpy()
+        return bbox_predictions
     
-    # First get the model outputs directly to get bbox predictions
-    model_outputs = model(**inputs)
-    bbox_predictions = model_outputs.bbox_logits.sigmoid().cpu().numpy()
+    bbox_predictions = model_bbox(model, inputs)
     
-    # Then generate the text
-    output_ids = model.generate(
-        **inputs, 
-        max_new_tokens=max_new_tokens,
-    )
+    @profile
+    def model_text(model, inputs):
+        with torch.inference_mode():
+            output_ids = model.generate(
+                **inputs, 
+                max_new_tokens=max_new_tokens,
+            )
+        return output_ids
     
+    output_ids = model_text(model, inputs)
     generated_ids = output_ids[0][len(inputs.input_ids[0]):]
     generated_text = processor.decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True)
     
-    return generated_text, bbox_predictions
+    out = edict({"text": generated_text, 
+            "bbox": bbox_predictions, 
+            "output_ids": output_ids})
+    return out
 
     
 def retry_on_error(func):
@@ -107,12 +120,12 @@ def retry_on_error(func):
     return wrapper
 
 @retry_on_error
+@profile
 def process_single_image(image_path: Path, model, processor):
     """Process a single image and return generated text."""
     image = prepare_image(image_path)
-    generated_text, bbox = generate_with_bbox(model, processor, image)
-    print(f"bbox: {bbox}")
-    return generated_text
+    out_dict = generate_with_bbox(model, processor, image)
+    return out_dict
 
 def main():
     model_path = "Qwen/Qwen2-VL-2B-Instruct"
@@ -135,7 +148,10 @@ def main():
         result = process_single_image(image_path, model, processor)
         if result is not None:
             print(f"\nResults for {image_path}:")
-            print(f"Generated Text: {result}")
+            print(f"Generated Text: {result.text}")
+            #print(f"BBox: {result.bbox}")
+            print(f"Output IDs: {result.output_ids[:20]}")
+           
 
 
 if __name__ == "__main__":
