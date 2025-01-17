@@ -35,10 +35,8 @@ def create_dataset_from_json(json_data):
     count = 0
 
     for filename, info in json_data.items():
-        count += 1
-        if count == 100000:
+        if len(dataset) >= 25000:
             break
-        
         sections = info["sections"]
         image_path = f"/home/tarch/datasets/synthetic/lines/english/{filename}.jpg"
         
@@ -146,13 +144,13 @@ dataset = create_dataset_from_json(ImageTextJson)
 
 # Prepare trainer
 training_args = TrainingArguments(
-    output_dir="/grphome/grp_handwriting/compute/qwen_finetune_test",
+    output_dir="/grphome/grp_handwriting/compute/qwen_finetune_test2",
     per_device_train_batch_size=2,
     gradient_accumulation_steps=4,
     per_device_eval_batch_size=2,
     num_train_epochs=3,
     learning_rate=5e-5,
-    logging_dir="/grphome/grp_handwriting/compute/qwen_finetune_test_logs",
+    logging_dir="/grphome/grp_handwriting/compute/qwen_finetune_test_logs2",
     logging_steps=100,
     save_steps=500,
     save_total_limit=2,
@@ -178,5 +176,5 @@ trainer = Trainer(
 trainer.train()
 
 # 7. Save Fine-Tuned Model
-model.save_pretrained("/grphome/grp_handwriting/compute/qwen_finetune_test")
-processor.save_pretrained("/grphome/grp_handwriting/compute/qwen_finetune_test")
+model.save_pretrained("/grphome/grp_handwriting/compute/qwen_finetune_test2")
+processor.save_pretrained("/grphome/grp_handwriting/compute/qwen_finetune_test2")
