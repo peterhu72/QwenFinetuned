@@ -1,7 +1,8 @@
 from transformers.models.qwen2_vl.processing_qwen2_vl import Qwen2VLProcessor
 from typing import List, Union
 import torch
-from transformers.feature_extraction_sequence_utils import BatchFeature, ImageInput, VideoInput
+from transformers.image_utils import ImageInput, VideoInput
+from transformers.feature_extraction_utils import BatchFeature
 
 class BBQwen2VLProcessor(Qwen2VLProcessor):
     """

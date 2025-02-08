@@ -1,5 +1,5 @@
 from transformers.models.qwen2_vl.modeling_qwen2_vl import Qwen2VLForConditionalGeneration, Qwen2VLCausalLMOutputWithPast
-from .configuration_bbqwen2_vl import BBQwen2VLConfig
+from configuration_bbqwen2_vl import BBQwen2VLConfig
 import torch.nn as nn
 from typing import Optional, Tuple, Union, List
 import torch
